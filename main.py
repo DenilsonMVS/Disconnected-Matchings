@@ -1,8 +1,10 @@
 
-# from ortools.init.python import init
 from ortools.sat.python import cp_model
+from ortools.linear_solver import pywraplp
 from random import randint
 import networkx as nx
+import matplotlib.pyplot as plt
+import statistics
 
 
 def generate_graph(num_vertices: int, num_edges: int):
@@ -17,6 +19,15 @@ def generate_graph(num_vertices: int, num_edges: int):
                 break
     
     return g
+
+def pretty_print_graph(g: list[list[bool]]):
+    n = len(g)
+    for i in range(n):
+        print(f"{i + 1}: ", end="")
+        for j in range(n):
+            if g[i][j]:
+                print(j + 1, end=" ")
+        print()
     
 def maximum_matching_with_sat(g: list[list[bool]]):
     n = len(g)
@@ -63,7 +74,50 @@ def maximum_matching_with_blossom(g: list[list[bool]]):
     return len(nx.max_weight_matching(G, maxcardinality=True))
 
 
-def maximum_disconnected_matching(g: list[list[bool]], num_components: int):
+def checker(g: list[list[bool]], num_components: int, matching: list[(int, int)]):
+    n = len(g)
+    adj_list = [[] for _ in range(n)]
+
+    for f, t in matching:
+        if not g[f][t]:
+            return False
+        adj_list[f].append(t)
+        adj_list[t].append(f)
+    
+    for node in adj_list:
+        if len(node) > 1:
+            return False
+        
+    induced_graph_list = [[] for _ in range(n)]
+    for i in range(n):
+        if len(adj_list[i]) >= 1:
+            for j in range(n):
+                if g[i][j]:
+                    induced_graph_list[i].append(j)
+        
+    color = [-1 for _ in range(n)]
+
+    for i in range(n):
+        if color[i] != -1:
+            continue
+        stack = []
+        stack.append(i)
+        while len(stack):
+            cur = stack.pop()
+            if color[cur] != -1:
+                continue
+            color[cur] = i
+            for to in induced_graph_list[cur]:
+                stack.append(to)
+    
+    colors = set()
+    for c in color:
+        if c != -1:
+            colors.add(c)
+    
+    return len(colors) >= num_components
+
+def maximum_disconnected_matching(g: list[list[bool]], num_components: int, timeout: int):
 
     n = len(g)
 
@@ -151,58 +205,122 @@ def maximum_disconnected_matching(g: list[list[bool]], num_components: int):
     
     model.maximize(sum(objective))
     
+    solver.parameters.max_time_in_seconds = timeout
+    solver.parameters.num_workers = 1
     status = solver.Solve(model)
-    if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+    if status == cp_model.OPTIMAL:
 
-        print("Grouping:")
-        grouping = []
-        for i in range(n):
-            grouping.append(solver.Value(vertex_group[i]))
-        print(grouping)
+        # print("Grouping:")
+        # grouping = []
+        # for i in range(n):
+        #     grouping.append(solver.Value(vertex_group[i]))
+        # print(grouping)
 
-        print("Matching:")
+        # print("Matching:")
         edges_res = []
         for i in range(n):
             for j in range(i + 1, n):
                 if solver.Value(edges[i][j]) == 1:
                     edges_res.append((i, j))
-        print(edges_res)
+        # print(edges_res)
 
-        print("Induced Graph Vertices:")
-        induced_vertices = []
-        for i in range(n):
-            if solver.Value(induced_graph_vertices[i]) == 1:
-                induced_vertices.append(i)
-        print(induced_vertices)
+        # print("Induced Graph Vertices:")
+        # induced_vertices = []
+        # for i in range(n):
+        #     if solver.Value(induced_graph_vertices[i]) == 1:
+        #         induced_vertices.append(i)
+        # print(induced_vertices)
 
-        print("Induced Graph Edges:")
-        induced_edges = []
+        # print("Induced Graph Edges:")
+        # induced_edges = []
+        # for i in range(n):
+        #     for j in range(i + 1, n):
+        #         if solver.Value(induced_graph_edges[i][j]) == 1:
+        #             induced_edges.append((i, j))
+        # print(induced_edges)
+        print(f"optimal: {solver.ObjectiveValue()}")
+
+        assert(checker(g, num_components, edges_res))
+
+        return solver.WallTime()
+    elif status == cp_model.FEASIBLE:
+        edges_res = []
         for i in range(n):
             for j in range(i + 1, n):
-                if solver.Value(induced_graph_edges[i][j]) == 1:
-                    induced_edges.append((i, j))
-        print(induced_edges)
+                if solver.Value(edges[i][j]) == 1:
+                    edges_res.append((i, j))
 
-        return solver.ObjectiveValue()
+        assert(checker(g, num_components, edges_res))
+        
+        print(f"feasible: {solver.ObjectiveValue()}")
+    elif status == cp_model.INFEASIBLE:
+        print("No solution found")
+        return solver.WallTime()
+    else:
+        print("Timeout")
 
+
+def benchmark(num_vertices: int, min_num_edges: int, max_num_edges: int, num_samples: int, k: int):
+    results = []
+    for num_edges in range(min_num_edges, max_num_edges + 1):
+        samples = []
+        print(num_edges)
+        for _ in range(num_samples):
+            g = generate_graph(num_vertices, num_edges)
+            samples.append(maximum_disconnected_matching(g, k, 10))
+        results.append(samples)
+    return results
 
 def main():
-    g = generate_graph(100, 125)
-    n = len(g)
+    min_edges = 0
+    max_edges = 100
+    results = benchmark(16, min_edges, max_edges, 10, 2)
+    
+    avg_times = []
+    std_devs = []
+    tle_counts = []  # To track the number of time limit exceeded samples
+    num_edges_list = list(range(min_edges, max_edges + 1))
 
-    for i in range(n):
-        print(f"{i}: ", end="")
-        for j in range(n):
-            if g[i][j]:
-                print(f"{j} ", end="")
-        print()
+    for samples in results:
+        valid_samples = [s for s in samples if s is not None]
+        tle_count = len([s for s in samples if s is None])  # Count the timeouts
 
-    print(maximum_matching_with_blossom(g))
-    print(maximum_matching_with_sat(g))
-    print(maximum_disconnected_matching(g, 3))
+        if valid_samples:
+            avg_time = statistics.mean(valid_samples)
+            std_dev_time = statistics.stdev(valid_samples) if len(valid_samples) > 1 else 0
+        else:
+            avg_time = 0
+            std_dev_time = 0
 
-    # solver = pywraplp.Solver.CreateSolver("SAT")
+        avg_times.append(avg_time)
+        std_devs.append(std_dev_time)
+        tle_counts.append(tle_count)  # Store TLE count for this num_edges
 
+    plt.figure(figsize=(15, 5))
+    
+    plt.subplot(1, 3, 1)
+    plt.plot(num_edges_list, avg_times, label="Avg Time (s)")
+    plt.xlabel("Number of Edges")
+    plt.ylabel("Average Execution Time (s)")
+    plt.title("Average Execution Time vs Number of Edges")
+    plt.grid(True)
+
+    plt.subplot(1, 3, 2)
+    plt.plot(num_edges_list, std_devs, label="Std Dev (s)", color="orange")
+    plt.xlabel("Number of Edges")
+    plt.ylabel("Standard Deviation (s)")
+    plt.title("Standard Deviation vs Number of Edges")
+    plt.grid(True)
+
+    plt.subplot(1, 3, 3)
+    plt.plot(num_edges_list, tle_counts, label="TLE Count", color="red")
+    plt.xlabel("Number of Edges")
+    plt.ylabel("Number of TLEs")
+    plt.title("Time Limit Exceeded (TLE) Count vs Number of Edges")
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     main()
