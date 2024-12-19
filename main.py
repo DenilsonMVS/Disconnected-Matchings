@@ -32,6 +32,7 @@ def maximum_disconnected_matching(g: list[list[bool]], num_components: int, time
             if not g[i][j]:
                 model.Add(edges[i][j] == False)
     
+    # Se uma aresta existe, então os vértices i e j não podem ter arestas com outros vértices
     for i in range(n):
         for j in range(i + 1, n):
             for k in range(0, n):
