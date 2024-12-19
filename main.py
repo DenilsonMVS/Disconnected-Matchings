@@ -1,24 +1,8 @@
 
 from ortools.sat.python import cp_model
-from ortools.linear_solver import pywraplp
-from random import randint
-import networkx as nx
-import matplotlib.pyplot as plt
-import statistics
-
-
-def generate_graph(num_vertices: int, num_edges: int):
-    g = [[False for _ in range(num_vertices)] for _ in range(num_vertices)]
-    
-    for _ in range(num_edges):
-        while True:
-            f, t = randint(0, num_vertices - 1), randint(0, num_vertices - 1)
-            if f != t and not g[f][t]:
-                g[f][t] = True
-                g[t][f] = True
-                break
-    
-    return g
+from load_graphs import load_adjacency_matrixes
+from solutions import Solution, FEASIBLE, INFEASIBLE, OPTIMAL, UNKNOWN
+import sys
 
 def pretty_print_graph(g: list[list[bool]]):
     n = len(g)
@@ -28,94 +12,6 @@ def pretty_print_graph(g: list[list[bool]]):
             if g[i][j]:
                 print(j + 1, end=" ")
         print()
-    
-def maximum_matching_with_sat(g: list[list[bool]]):
-    n = len(g)
-
-    model = cp_model.CpModel()
-    solver = cp_model.CpSolver()
-    edges = [[model.new_bool_var(f"edge_{i}_{j}") for j in range(n)] for i in range(n)]
-    
-    for i in range(n):
-        for j in range(i, n):
-            model.Add(edges[i][j] == edges[j][i])
-
-    for i in range(n):
-        for j in range(i, n):
-            if not g[i][j]:
-                model.Add(edges[i][j] == False)
-    
-    for i in range(n):
-        for j in range(i + 1, n):
-            for k in range(0, n):
-                if k != i and k != j:
-                    model.AddImplication(edges[i][j], edges[i][k].Not())
-                    model.AddImplication(edges[i][j], edges[k][j].Not())
-    
-    objective = []
-    for i in range(n):
-        for j in range(i + 1, n):
-            objective.append(edges[i][j])
-    
-    model.maximize(sum(objective))
-    
-    status = solver.Solve(model)
-    if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-        return solver.ObjectiveValue()
-    
-def maximum_matching_with_blossom(g: list[list[bool]]):
-    G = nx.Graph()
-
-    for i in range(len(g)):
-        for j in range(i + 1, len(g)):
-            if g[i][j]:
-                G.add_edge(i, j)
-
-    return len(nx.max_weight_matching(G, maxcardinality=True))
-
-
-def checker(g: list[list[bool]], num_components: int, matching: list[(int, int)]):
-    n = len(g)
-    adj_list = [[] for _ in range(n)]
-
-    for f, t in matching:
-        if not g[f][t]:
-            return False
-        adj_list[f].append(t)
-        adj_list[t].append(f)
-    
-    for node in adj_list:
-        if len(node) > 1:
-            return False
-        
-    induced_graph_list = [[] for _ in range(n)]
-    for i in range(n):
-        if len(adj_list[i]) >= 1:
-            for j in range(n):
-                if g[i][j]:
-                    induced_graph_list[i].append(j)
-        
-    color = [-1 for _ in range(n)]
-
-    for i in range(n):
-        if color[i] != -1:
-            continue
-        stack = []
-        stack.append(i)
-        while len(stack):
-            cur = stack.pop()
-            if color[cur] != -1:
-                continue
-            color[cur] = i
-            for to in induced_graph_list[cur]:
-                stack.append(to)
-    
-    colors = set()
-    for c in color:
-        if c != -1:
-            colors.add(c)
-    
-    return len(colors) >= num_components
 
 def maximum_disconnected_matching(g: list[list[bool]], num_components: int, timeout: int):
 
@@ -208,119 +104,60 @@ def maximum_disconnected_matching(g: list[list[bool]], num_components: int, time
     solver.parameters.max_time_in_seconds = timeout
     solver.parameters.num_workers = 1
     status = solver.Solve(model)
+
     if status == cp_model.OPTIMAL:
 
-        # print("Grouping:")
-        # grouping = []
-        # for i in range(n):
-        #     grouping.append(solver.Value(vertex_group[i]))
-        # print(grouping)
-
-        # print("Matching:")
         edges_res = []
         for i in range(n):
             for j in range(i + 1, n):
                 if solver.Value(edges[i][j]) == 1:
                     edges_res.append((i, j))
-        # print(edges_res)
+        
+        return Solution(OPTIMAL, edges_res, solver.WallTime())
 
-        # print("Induced Graph Vertices:")
-        # induced_vertices = []
-        # for i in range(n):
-        #     if solver.Value(induced_graph_vertices[i]) == 1:
-        #         induced_vertices.append(i)
-        # print(induced_vertices)
-
-        # print("Induced Graph Edges:")
-        # induced_edges = []
-        # for i in range(n):
-        #     for j in range(i + 1, n):
-        #         if solver.Value(induced_graph_edges[i][j]) == 1:
-        #             induced_edges.append((i, j))
-        # print(induced_edges)
-        print(f"optimal: {solver.ObjectiveValue()}")
-
-        assert(checker(g, num_components, edges_res))
-
-        return solver.WallTime()
     elif status == cp_model.FEASIBLE:
         edges_res = []
         for i in range(n):
             for j in range(i + 1, n):
                 if solver.Value(edges[i][j]) == 1:
                     edges_res.append((i, j))
-
-        assert(checker(g, num_components, edges_res))
         
-        print(f"feasible: {solver.ObjectiveValue()}")
+        return Solution(FEASIBLE, edges_res, solver.WallTime())
+
     elif status == cp_model.INFEASIBLE:
-        print("No solution found")
-        return solver.WallTime()
+        return Solution(INFEASIBLE, None, solver.WallTime())
+    elif status == cp_model.UNKNOWN:
+        return Solution(UNKNOWN, None, solver.WallTime())
     else:
-        print("Timeout")
+        print(status)
 
-
-def benchmark(num_vertices: int, min_num_edges: int, max_num_edges: int, num_samples: int, k: int):
-    results = []
-    for num_edges in range(min_num_edges, max_num_edges + 1):
-        samples = []
-        print(num_edges)
-        for _ in range(num_samples):
-            g = generate_graph(num_vertices, num_edges)
-            samples.append(maximum_disconnected_matching(g, k, 10))
-        results.append(samples)
-    return results
 
 def main():
-    min_edges = 0
-    max_edges = 100
-    results = benchmark(16, min_edges, max_edges, 10, 2)
-    
-    avg_times = []
-    std_devs = []
-    tle_counts = []  # To track the number of time limit exceeded samples
-    num_edges_list = list(range(min_edges, max_edges + 1))
+    if len(sys.argv) != 3:
+        print("Usage: python main.py <input_file> <output_file>")
+        return
 
-    for samples in results:
-        valid_samples = [s for s in samples if s is not None]
-        tle_count = len([s for s in samples if s is None])  # Count the timeouts
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
 
-        if valid_samples:
-            avg_time = statistics.mean(valid_samples)
-            std_dev_time = statistics.stdev(valid_samples) if len(valid_samples) > 1 else 0
-        else:
-            avg_time = 0
-            std_dev_time = 0
+    file = open(output_file, "w")
+    graphs = load_adjacency_matrixes(input_file)
+    for g, num_components in graphs:
+        solution = maximum_disconnected_matching(g, num_components, 4)
+        solution.log(file)
+        file.flush()
+        
 
-        avg_times.append(avg_time)
-        std_devs.append(std_dev_time)
-        tle_counts.append(tle_count)  # Store TLE count for this num_edges
+# python3 main.py test_instances/16_2.txt solutions/16_2.txt && python3 main.py test_instances/16_3.txt solutions/16_3.txt && python3 main.py test_instances/16_4.txt solutions/16_4.txt && python3 main.py test_instances/32_2.txt solutions/32_2.txt && python3 main.py test_instances/32_3.txt solutions/32_3.txt && python3 main.py test_instances/32_4.txt solutions/32_4.txt && python3 main.py test_instances/32_8.txt solutions/32_8.txt && python3 main.py test_instances/64_2.txt solutions/64_2.txt && python3 main.py test_instances/64_3.txt solutions/64_3.txt && python3 main.py test_instances/64_4.txt solutions/64_4.txt && python3 main.py test_instances/64_8.txt solutions/64_8.txt && python3 main.py test_instances/64_16.txt solutions/64_16.txt
+# python3 main.py test_instances/16_2.txt solutions/16_2.txt && python3 main.py test_instances/16_3.txt solutions/16_3.txt && python3 main.py test_instances/16_4.txt solutions/16_4.txt && python3 main.py test_instances/32_2.txt solutions/32_2.txt && python3 main.py test_instances/32_3.txt solutions/32_3.txt && python3 main.py test_instances/32_4.txt solutions/32_4.txt && python3 main.py test_instances/32_8.txt solutions/32_8.txt
 
-    plt.figure(figsize=(15, 5))
-    
-    plt.subplot(1, 3, 1)
-    plt.plot(num_edges_list, avg_times, label="Avg Time (s)")
-    plt.xlabel("Number of Edges")
-    plt.ylabel("Average Execution Time (s)")
-    plt.title("Average Execution Time vs Number of Edges")
-    plt.grid(True)
-
-    plt.subplot(1, 3, 2)
-    plt.plot(num_edges_list, std_devs, label="Std Dev (s)", color="orange")
-    plt.xlabel("Number of Edges")
-    plt.ylabel("Standard Deviation (s)")
-    plt.title("Standard Deviation vs Number of Edges")
-    plt.grid(True)
-
-    plt.subplot(1, 3, 3)
-    plt.plot(num_edges_list, tle_counts, label="TLE Count", color="red")
-    plt.xlabel("Number of Edges")
-    plt.ylabel("Number of TLEs")
-    plt.title("Time Limit Exceeded (TLE) Count vs Number of Edges")
-    plt.grid(True)
-
-    plt.tight_layout()
-    plt.show()
+# python3 statatistics.py test_instances/16_2.txt solutions/cp_sat/test1/16_2.txt images/cp_sat/test1/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/cp_sat/test1/16_3.txt images/cp_sat/test1/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/cp_sat/test1/16_4.txt images/cp_sat/test1/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/cp_sat/test1/32_2.txt images/cp_sat/test1/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/cp_sat/test1/32_3.txt images/cp_sat/test1/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/cp_sat/test1/32_4.txt images/cp_sat/test1/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/cp_sat/test1/32_8.txt images/cp_sat/test1/32_8.png
 
 if __name__ == "__main__":
     main()
