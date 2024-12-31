@@ -89,28 +89,22 @@ def plot_results(results_by_num_edges, filename: str) -> None:
         timeouts.append(results_by_num_edges[edges][0])
     
     # Create subplots
-    fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
     
     # Plot average times
     axs[0].plot(num_edges, averages, marker='o', label='Average Time')
+    axs[0].fill_between(num_edges, np.array(averages) - np.array(std_devs), np.array(averages) + np.array(std_devs), color='b', alpha=0.2)
     axs[0].set_xlabel('Number of Edges')
     axs[0].set_ylabel('Average Time (s)')
     axs[0].set_title('Average Time vs Number of Edges')
     axs[0].grid(True)
     
-    # Plot standard deviation
-    axs[1].plot(num_edges, std_devs, marker='o', label='Standard Deviation')
-    axs[1].set_xlabel('Number of Edges')
-    axs[1].set_ylabel('Standard Deviation (s)')
-    axs[1].set_title('Standard Deviation vs Number of Edges')
-    axs[1].grid(True)
-    
     # Plot number of timeouts
-    axs[2].plot(num_edges, timeouts, marker='o', label='Number of Timeouts')
-    axs[2].set_xlabel('Number of Edges')
-    axs[2].set_ylabel('Number of Timeouts')
-    axs[2].set_title('Number of Timeouts vs Number of Edges')
-    axs[2].grid(True)
+    axs[1].plot(num_edges, timeouts, marker='o', label='Number of Timeouts')
+    axs[1].set_xlabel('Number of Edges')
+    axs[1].set_ylabel('Number of Timeouts')
+    axs[1].set_title('Number of Timeouts vs Number of Edges')
+    axs[1].grid(True)
     
     # Adjust layout
     plt.tight_layout()

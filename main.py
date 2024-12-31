@@ -41,58 +41,39 @@ def maximum_disconnected_matching(g: list[list[bool]], num_components: int, time
                     model.AddImplication(edges[i][j], edges[k][j].Not())
 
 
-    induced_graph_vertices = [model.new_bool_var(f"induced_vertice_{i}") for i in range(n)]
-    induced_graph_edges = [[model.new_bool_var(f"induced_edges_{i}_{j}") for j in range(n)] for i in range(n)]
-
-    # Grafo simétrico
-    for i in range(n):
-        for j in range(i + 1, n):
-            model.Add(induced_graph_edges[i][j] == induced_graph_edges[j][i])
-
-    # Só deve existir vértice se ele estiver no matching
-    for i in range(n):
-        model.Add(induced_graph_vertices[i] == sum(edges[i]))
-
-    # Aresta existe se e somente se (os dois vértices estão no grafo induzido e ela existia no grafo original)
-    for i in range(n):
-        for j in range(i + 1, n):
-            if not g[i][j]:
-                model.add(induced_graph_edges[i][j] == False)
-            else:
-                model.Add(induced_graph_edges[i][j] == 1).OnlyEnforceIf([induced_graph_vertices[i], induced_graph_vertices[j]])
-                model.Add(induced_graph_edges[i][j] == 0).OnlyEnforceIf([induced_graph_vertices[i].Not(), induced_graph_vertices[j].Not()])
-
-
-
-    # Semente i nasceu no vértice j
-    seeds = [[model.new_bool_var(f"seed_{i}_{j}") for j in range(n)] for i in range(n)]
-    seed_exist = [model.new_bool_var(f"seed_exist_{i}") for i in range(n)]
+    # Semente i nasceu no vértice i
+    seeds = [model.new_bool_var(f"seed_{i}") for i in range(n)]
     num_seeds = model.new_int_var(0, n, "num_seeds")
-
-    # Semente só pode nascer em um vértice
-    for i in range(n):
-        seed = seeds[i]
-        model.Add(seed_exist[i] == sum(seeds[i]))
-        model.AddAtMostOne(seed)
     
-    model.Add(num_seeds == sum(seed_exist))
+    model.Add(num_seeds == sum(seeds))
     model.Add(num_seeds >= num_components)
 
-    vertex_group = [model.new_int_var(-1, n - 1, "vertex_group_{i}") for i in range(n)]
+    vertex_group = [model.new_int_var(-1, n - 1, f"vertex_group_{i}") for i in range(n)]
+
+    edge_in_node = [model.new_bool_var(f"edge_in_node_{i}") for i in range(n)]
+    for i in range(n):
+        model.add_bool_or([edges[i][j] for j in range(n)]).OnlyEnforceIf(edge_in_node[i])
+        model.add_bool_and([edges[i][j].Not() for j in range(n)]).OnlyEnforceIf(edge_in_node[i].Not())
 
     # Se o vértice não estiver no grafo induzido, não faz parte do grupo de nenhuma semente
     for i in range(n):
-        model.Add(vertex_group[i] == -1).only_enforce_if(induced_graph_vertices[i].Not())
+        model.Add(vertex_group[i] == -1).only_enforce_if(edge_in_node[i].Not())
 
     # Se a semente nasceu ali, o vértice faz parte do grupo da semente
     for i in range(n):
-        for j in range(n):
-            model.add(vertex_group[j] == i).only_enforce_if(seeds[i][j])
+        model.add(vertex_group[i] == i).only_enforce_if(seeds[i])
     
     # Se vértice é vizinho de outro, os dois devem estar no mesmo grupo
+    are_neighbors_list = []
     for i in range(n):
         for j in range(i + 1, n):
-            model.add(vertex_group[i] == vertex_group[j]).only_enforce_if(induced_graph_edges[i][j])
+            are_neighbors = model.new_bool_var(f"are_neighbors_{i}_{j}")
+            are_neighbors_list.append((i, j, are_neighbors))
+
+            model.add_bool_and([edge_in_node[i], edge_in_node[j], g[i][j]]).only_enforce_if(are_neighbors)
+            model.add_bool_or([edge_in_node[i].Not(), edge_in_node[j].Not(), not g[i][j], are_neighbors])
+
+            model.add(vertex_group[i] == vertex_group[j]).only_enforce_if(are_neighbors)
 
 
     objective = []
@@ -107,7 +88,6 @@ def maximum_disconnected_matching(g: list[list[bool]], num_components: int, time
     status = solver.Solve(model)
 
     if status == cp_model.OPTIMAL:
-
         edges_res = []
         for i in range(n):
             for j in range(i + 1, n):
@@ -151,6 +131,7 @@ def main():
 
 # python3 main.py test_instances/16_2.txt solutions/16_2.txt && python3 main.py test_instances/16_3.txt solutions/16_3.txt && python3 main.py test_instances/16_4.txt solutions/16_4.txt && python3 main.py test_instances/32_2.txt solutions/32_2.txt && python3 main.py test_instances/32_3.txt solutions/32_3.txt && python3 main.py test_instances/32_4.txt solutions/32_4.txt && python3 main.py test_instances/32_8.txt solutions/32_8.txt && python3 main.py test_instances/64_2.txt solutions/64_2.txt && python3 main.py test_instances/64_3.txt solutions/64_3.txt && python3 main.py test_instances/64_4.txt solutions/64_4.txt && python3 main.py test_instances/64_8.txt solutions/64_8.txt && python3 main.py test_instances/64_16.txt solutions/64_16.txt
 # python3 main.py test_instances/16_2.txt solutions/16_2.txt && python3 main.py test_instances/16_3.txt solutions/16_3.txt && python3 main.py test_instances/16_4.txt solutions/16_4.txt && python3 main.py test_instances/32_2.txt solutions/32_2.txt && python3 main.py test_instances/32_3.txt solutions/32_3.txt && python3 main.py test_instances/32_4.txt solutions/32_4.txt && python3 main.py test_instances/32_8.txt solutions/32_8.txt
+# python3 pi.py test_instances/16_2.txt solutions/16_2.txt && python3 pi.py test_instances/16_3.txt solutions/16_3.txt && python3 pi.py test_instances/16_4.txt solutions/16_4.txt && python3 pi.py test_instances/32_2.txt solutions/32_2.txt && python3 pi.py test_instances/32_3.txt solutions/32_3.txt && python3 pi.py test_instances/32_4.txt solutions/32_4.txt && python3 pi.py test_instances/32_8.txt solutions/32_8.txt
 
 # python3 statatistics.py test_instances/16_2.txt solutions/cp_sat/test1/16_2.txt images/cp_sat/test1/16_2.png
 # python3 statatistics.py test_instances/16_3.txt solutions/cp_sat/test1/16_3.txt images/cp_sat/test1/16_3.png
@@ -159,6 +140,22 @@ def main():
 # python3 statatistics.py test_instances/32_3.txt solutions/cp_sat/test1/32_3.txt images/cp_sat/test1/32_3.png
 # python3 statatistics.py test_instances/32_4.txt solutions/cp_sat/test1/32_4.txt images/cp_sat/test1/32_4.png
 # python3 statatistics.py test_instances/32_8.txt solutions/cp_sat/test1/32_8.txt images/cp_sat/test1/32_8.png
+
+# python3 statatistics.py test_instances/16_2.txt solutions/cp_sat/test2/16_2.txt images/cp_sat/test2/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/cp_sat/test2/16_3.txt images/cp_sat/test2/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/cp_sat/test2/16_4.txt images/cp_sat/test2/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/cp_sat/test2/32_2.txt images/cp_sat/test2/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/cp_sat/test2/32_3.txt images/cp_sat/test2/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/cp_sat/test2/32_4.txt images/cp_sat/test2/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/cp_sat/test2/32_8.txt images/cp_sat/test2/32_8.png
+
+# python3 statatistics.py test_instances/16_2.txt solutions/linear/test1/16_2.txt images/linear/test1/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/linear/test1/16_3.txt images/linear/test1/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/linear/test1/16_4.txt images/linear/test1/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/linear/test1/32_2.txt images/linear/test1/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/linear/test1/32_3.txt images/linear/test1/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/linear/test1/32_4.txt images/linear/test1/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/linear/test1/32_8.txt images/linear/test1/32_8.png
 
 if __name__ == "__main__":
     main()
