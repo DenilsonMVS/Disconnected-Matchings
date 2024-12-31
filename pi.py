@@ -3,10 +3,11 @@ from pulp import LpProblem, LpMaximize, LpVariable, lpSum, LpStatus, PULP_CBC_CM
 from load_graphs import load_adjacency_matrixes
 from solutions import Solution, OPTIMAL, FEASIBLE, INFEASIBLE, UNKNOWN
 
+INF = 1000
 
 def add_if_a_true_then_b_c_equal(prob, a, b, c):
-    prob += 1 - a + b >= c
-    prob += 1 - a + c >= b
+    prob += (1 - a) * INF + b >= c
+    prob += (1 - a) * INF + c >= b
 
 def maximum_disconnected_matching(g, num_components, timeout):
 
@@ -38,36 +39,22 @@ def maximum_disconnected_matching(g, num_components, timeout):
     # At least num_components seeds must be selected
     prob += lpSum(seeds) >= num_components
 
-    vertex_group = [[LpVariable(f"vertex_group_{i}_{j}", cat="Binary") for j in range(n)] for i in range(n)]
+    vertex_group = [LpVariable(f"vertex_group_{i}") for i in range(n)]
+
 
     # Vertex can belong to a group only if it has an edge
     for i in range(n):
-        prob += lpSum(vertex_group[i]) <= lpSum(edges[i])
+        prob += vertex_group[i] >= 0
+        prob += vertex_group[i] <= lpSum(edges[i]) * INF
 
     for i in range(n):
-        prob += seeds[i] == vertex_group[i][i]
-
-
-    induced_edges = [[LpVariable(f"induced_edge_{i}_{j}", cat="Binary") for j in range(n)] for i in range(n)]
-
-    for i in range(n):
-        prob += induced_edges[i][i] == 0
+        add_if_a_true_then_b_c_equal(prob, seeds[i], vertex_group[i], i + 1)
 
     for i in range(n):
         for j in range(i + 1, n):
-            prob += induced_edges[i][j] == induced_edges[j][i]
+            prob += vertex_group[i] + ((1 - g[i][j]) + (1 - lpSum(edges[i])) + (1 - lpSum(edges[j]))) * INF >= vertex_group[j]
+            prob += vertex_group[j] + ((1 - g[i][j]) + (1 - lpSum(edges[i])) + (1 - lpSum(edges[j]))) * INF >= vertex_group[i]
 
-    for i in range(n):
-        for j in range(i + 1, n):
-            prob += induced_edges[i][j] >= g[i][j] + lpSum(edges[i]) + lpSum(edges[j]) - 2
-            prob += induced_edges[i][j] <= g[i][j]
-            prob += induced_edges[i][j] <= lpSum(edges[i])
-            prob += induced_edges[i][j] <= lpSum(edges[j])
-    
-    for i in range(n):
-        for j in range(i + 1, n):
-            for group in range(n):
-                add_if_a_true_then_b_c_equal(prob, induced_edges[i][j], vertex_group[i][group], vertex_group[j][group])
 
     # Objective: Maximize the number of selected edges
     prob += lpSum(lpSum(edges[i][j] for j in range(i + 1, n)) for i in range(n))

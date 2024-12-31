@@ -157,5 +157,13 @@ def main():
 # python3 statatistics.py test_instances/32_4.txt solutions/linear/test1/32_4.txt images/linear/test1/32_4.png
 # python3 statatistics.py test_instances/32_8.txt solutions/linear/test1/32_8.txt images/linear/test1/32_8.png
 
+# python3 statatistics.py test_instances/16_2.txt solutions/linear/test2/16_2.txt images/linear/test2/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/linear/test2/16_3.txt images/linear/test2/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/linear/test2/16_4.txt images/linear/test2/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/linear/test2/32_2.txt images/linear/test2/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/linear/test2/32_3.txt images/linear/test2/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/linear/test2/32_4.txt images/linear/test2/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/linear/test2/32_8.txt images/linear/test2/32_8.png
+
 if __name__ == "__main__":
     main()
