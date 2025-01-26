@@ -20,7 +20,7 @@ def maximum_disconnected_matching(g: list[list[bool]], num_components: int, time
     model = cp_model.CpModel()
     solver = cp_model.CpSolver()
     
-    
+    has_edge = [model.new_bool_var(f"has_edge_{i}") for i in range(n)]
     edges = [[model.new_bool_var(f"edge_{i}_{j}") for j in range(n)] for i in range(n)]
     
     for i in range(n):
@@ -31,6 +31,12 @@ def maximum_disconnected_matching(g: list[list[bool]], num_components: int, time
         for j in range(i, n):
             if not g[i][j]:
                 model.Add(edges[i][j] == False)
+
+    # calculating the value of has_edge
+    for i in range(n):
+        model.add_bool_or([has_edge[i].Not()] + edges[i])
+        for j in range(n):
+            model.add_bool_or([has_edge[i], edges[i][j].Not()])
     
     # Se uma aresta existe, então os vértices i e j não podem ter arestas com outros vértices
     for i in range(n):
@@ -41,41 +47,30 @@ def maximum_disconnected_matching(g: list[list[bool]], num_components: int, time
                     model.AddImplication(edges[i][j], edges[k][j].Not())
 
 
-    # Semente i nasceu no vértice i
-    seeds = [model.new_bool_var(f"seed_{i}") for i in range(n)]
+    vertex_group = [[model.new_bool_var(f"vertex_group_{i}_{j}") for j in range(n)] for i in range(n)]
     num_seeds = model.new_int_var(0, n, "num_seeds")
     
-    model.Add(num_seeds == sum(seeds))
+    model.Add(num_seeds == sum([vertex_group[i][i] for i in range(n)]))
     model.Add(num_seeds >= num_components)
 
-    vertex_group = [model.new_int_var(-1, n - 1, f"vertex_group_{i}") for i in range(n)]
-
-    edge_in_node = [model.new_bool_var(f"edge_in_node_{i}") for i in range(n)]
     for i in range(n):
-        model.add_bool_or([edges[i][j] for j in range(n)]).OnlyEnforceIf(edge_in_node[i])
-        model.add_bool_and([edges[i][j].Not() for j in range(n)]).OnlyEnforceIf(edge_in_node[i].Not())
+        for j in range(n):
+            for k in range(n):
+                if j != k:
+                    model.AddImplication(vertex_group[i][j], vertex_group[i][k].Not())
 
     # Se o vértice não estiver no grafo induzido, não faz parte do grupo de nenhuma semente
     for i in range(n):
-        model.Add(vertex_group[i] == -1).only_enforce_if(edge_in_node[i].Not())
+        model.AddImplication(has_edge[i].Not(), vertex_group[i][i].Not())
 
-    # Se a semente nasceu ali, o vértice faz parte do grupo da semente
-    for i in range(n):
-        model.add(vertex_group[i] == i).only_enforce_if(seeds[i])
-    
-    # Se vértice é vizinho de outro, os dois devem estar no mesmo grupo
-    are_neighbors_list = []
+    # Constraint de estarem no mesmo grupo se houver uma aresta entre eles
     for i in range(n):
         for j in range(i + 1, n):
-            are_neighbors = model.new_bool_var(f"are_neighbors_{i}_{j}")
-            are_neighbors_list.append((i, j, are_neighbors))
+            for k in range(n):
+                model.add_bool_or([not g[i][j], has_edge[i].Not(), has_edge[j].Not(), vertex_group[i][k].Not(), vertex_group[j][k]])
+                model.add_bool_or([not g[i][j], has_edge[i].Not(), has_edge[j].Not(), vertex_group[i][k], vertex_group[j][k].Not()])
 
-            model.add_bool_and([edge_in_node[i], edge_in_node[j], g[i][j]]).only_enforce_if(are_neighbors)
-            model.add_bool_or([edge_in_node[i].Not(), edge_in_node[j].Not(), not g[i][j], are_neighbors])
-
-            model.add(vertex_group[i] == vertex_group[j]).only_enforce_if(are_neighbors)
-
-
+    
     objective = []
     for i in range(n):
         for j in range(i + 1, n):
@@ -148,6 +143,14 @@ def main():
 # python3 statatistics.py test_instances/32_3.txt solutions/cp_sat/test2/32_3.txt images/cp_sat/test2/32_3.png
 # python3 statatistics.py test_instances/32_4.txt solutions/cp_sat/test2/32_4.txt images/cp_sat/test2/32_4.png
 # python3 statatistics.py test_instances/32_8.txt solutions/cp_sat/test2/32_8.txt images/cp_sat/test2/32_8.png
+
+# python3 statatistics.py test_instances/16_2.txt solutions/cp_sat/test3/16_2.txt images/cp_sat/test3/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/cp_sat/test3/16_3.txt images/cp_sat/test3/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/cp_sat/test3/16_4.txt images/cp_sat/test3/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/cp_sat/test3/32_2.txt images/cp_sat/test3/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/cp_sat/test3/32_3.txt images/cp_sat/test3/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/cp_sat/test3/32_4.txt images/cp_sat/test3/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/cp_sat/test3/32_8.txt images/cp_sat/test3/32_8.png
 
 # python3 statatistics.py test_instances/16_2.txt solutions/linear/test1/16_2.txt images/linear/test1/16_2.png
 # python3 statatistics.py test_instances/16_3.txt solutions/linear/test1/16_3.txt images/linear/test1/16_3.png
