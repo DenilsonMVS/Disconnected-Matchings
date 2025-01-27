@@ -7,53 +7,13 @@ using namespace std;
 #define OPTIMAL 1
 #define FEASIBLE 2
 #define UNKNOWN 3
-
-vector<pair<int, vector<vector<int>>>> load_graphs(const char filename[]) {
-    auto file = ifstream(filename);
-    
-    int num_cases;
-    file >> num_cases;
-
-    auto graphs = vector<pair<int, vector<vector<int>>>>();
-    graphs.reserve(num_cases);
-
-    while(num_cases--) {
-        int n, m, components;
-        file >> n >> m >> components;
-
-        auto graph = vector<vector<int>>(n, vector<int>());
-
-        while(m--) {
-            int f, t;
-            file >> f >> t;
-
-            graph[f].push_back(t);
-            graph[t].push_back(f);
-        }
-
-        graphs.push_back({components, move(graph)});
-    }
-
-    return graphs;
-}
-
-
-void remove_from_vec(vector<int> &v, int value) {
-    for(int i = 0; i < v.size(); i++) {
-        if(v[i] == value) {
-            swap(v[i], v.back());
-            v.pop_back();
-            return;
-        }
-    }
-}
-
 #define MAX 10000
 
 int n, m, c;
 int stk[MAX];
 int match[MAX];
 vector<int> g[MAX];
+vector<int> bg[MAX];
 int pai[MAX], base[MAX], vis[MAX];
 queue<int> q;
 
@@ -103,7 +63,7 @@ int getpath(int s) {
 
 	while (q.size()) {
 		int u = q.front(); q.pop();
-		for (int i : g[u]) {
+		for (int i : bg[u]) {
 			if (base[i] == base[u] or match[u] == i) continue;
 			if (i == s or (match[i] != -1 and pai[match[i]] != -1))
 				contract(u, i);
@@ -128,7 +88,7 @@ vector<pair<int, int>> blossom() {
 
 	for (int i = 0; i < n; i++) {
         if (match[i] == -1) {
-            for (int j : g[i]) {
+            for (int j : bg[i]) {
                 if (match[j] == -1) {
                     match[i] = j;
                     match[j] = i;
@@ -160,90 +120,45 @@ vector<pair<int, int>> blossom() {
 	return ans;
 }
 
-std::pair<vector<int>, int> remove_node(int node_idx) {
-    for(auto to : g[node_idx]) {
-        // Poderia ser O(1) ou O(log(n))
-        // Mas comos os valores são baixos,
-        // Acredito que assim seja mais eficiente
-        remove_from_vec(g[to], node_idx);
-    }
-    auto tmp = vector<int>();
-    swap(tmp, g[node_idx]);
-    
-    visited = 0;
-    int s_size = 0;
-    int amount_dfs = 0;
-    for(auto to : tmp) {
-        if(visited[to]) {
-            continue;
+
+struct Configuration {
+    int value;
+    mutable int nxt_idx_to_change;
+    bitset<64> config;
+
+    Configuration(bitset<64> config, int nxt_idx_to_change) {
+        for(int i = 0; i < n; i++) {
+            bg[i].clear();
         }
-        
-        int size = 0;
-        stk[s_size++] = to;
-        while(s_size) {
-            auto cur = stk[--s_size];
-            if(visited[cur]) {
+
+        for(int i = 0; i < n; i++) {
+            if(!config[i]) {
                 continue;
             }
-            visited[cur] = true;
-            size++;
 
-            for(auto to : g[cur]) {
-                if(visited[to]) {
+            for(auto to : g[i]) {
+                if(!config[to]) {
                     continue;
                 }
 
-                stk[s_size++] = to;
+                bg[i].push_back(to);
+                bg[to].push_back(i);
             }
         }
 
-        amount_dfs += (size >= 2);
+        this->value = blossom().size();
+        this->nxt_idx_to_change = nxt_idx_to_change;
+        this->config = config;
     }
 
-    return {tmp, amount_dfs};
-}
-
-void readd_node(int node_idx, vector<int> &tmp) {
-    swap(tmp, g[node_idx]);
-    for(auto to : g[node_idx]) {
-        g[to].push_back(node_idx);
-    }
-}
-
-vector<pair<int, int>> rec(int node_idx, int num_components) {
-    if(node_idx == n || num_components == 0) {
-        return vector<pair<int, int>>();
+    void advance() const {
+        this->nxt_idx_to_change++;
     }
 
-    if(num_components >= c) {
-        return blossom();
+    bool operator<(const Configuration &other) const {
+        return this->value < other.value;
     }
-
-    auto [tmp, amount_dfs] = remove_node(node_idx);
-    
-
-    auto res1 = vector<pair<int, int>>();
-
-    int new_num_components = num_components + amount_dfs - 1;
-    if(new_num_components >= c) {
-        res1 = blossom();
-    } else {
-        res1 = rec(node_idx + 1, new_num_components);
-    }
-
-
-    readd_node(node_idx, tmp);
-
-
-    auto res2 = rec(node_idx + 1, num_components);
-
-    if(res1.size() > res2.size()) {
-        return res1;
-    } else {
-        return res2;
-    }
-}
-
+};
 
 int calculate_num_components() {
     visited = 0;
@@ -265,7 +180,7 @@ int calculate_num_components() {
             visited[cur] = true;
             comp_size++;
 
-            for(auto to : g[cur]) {
+            for(auto to : bg[cur]) {
                 if(visited[to]) {
                     continue;
                 }
@@ -278,6 +193,149 @@ int calculate_num_components() {
     }
 
     return amount;
+}
+
+int calculate_num_components(bitset<64> config) {
+    visited = 0;
+
+    int amount = 0;
+    for(int i = 0; i < n; i++) {
+        if(visited[i] || !config[i]) {
+            continue;
+        }
+
+        int comp_size = 0;
+        int s_size = 0;
+        stk[s_size++] = i;
+        while(s_size) {
+            int cur = stk[--s_size];
+            if(visited[cur]) {
+                continue;
+            }
+            visited[cur] = true;
+            comp_size++;
+
+            for(auto to : bg[cur]) {
+                if(visited[to] || !config[to]) {
+                    continue;
+                }
+
+                stk[s_size++] = to;
+            }
+        }
+
+        amount += (comp_size >= 2);
+    }
+
+    return amount;
+}
+
+vector<pair<int, int>> extract_best_solution(bitset<64> config) {
+    for(int i = 0; i < n; i++) {
+        bg[i].clear();
+    }
+
+    for(int i = 0; i < n; i++) {
+        if(!config[i]) {
+            continue;
+        }
+
+        for(auto to : g[i]) {
+            if(!config[to]) {
+                continue;
+            }
+
+            bg[i].push_back(to);
+            bg[to].push_back(i);
+        }
+    }
+
+    int num_comps = calculate_num_components();
+    if(num_comps >= c) {
+        return blossom();
+    } else {
+        return {};
+    }
+}
+
+
+bool can_have_one_extra_component(bitset<64> config, int num_comps_before) {
+
+    for(int i = 0; i < n; i++) {
+        for(auto to : bg[i]) {
+
+            auto new_config = config;
+
+            for(auto neigh : bg[i]) {
+                new_config[neigh] = false;
+            }
+
+            for(auto neigh : bg[to]) {
+                new_config[neigh] = false;
+            }
+            new_config[i] = true;
+            new_config[to] = true;
+
+            int num_comps_after = calculate_num_components(new_config);
+            if(num_comps_after > num_comps_before) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+vector<pair<int, int>> run() {
+    
+    auto firstSol = blossom();
+
+    priority_queue<Configuration> candidates;
+    auto allNodes = bitset<64>();
+    allNodes.set();
+    auto base_config = Configuration(allNodes, 0);
+    int num_comps = calculate_num_components();
+    candidates.push(base_config);
+
+    auto best_solution = base_config;
+    if(num_comps < c) {
+        best_solution.value = 0;
+    }    
+
+    while(candidates.size()) {
+        auto &v = candidates.top();
+        int node_idx = v.nxt_idx_to_change;
+
+        if(v.value <= best_solution.value) {
+            break;
+        }
+        
+
+        v.advance();
+        if(v.nxt_idx_to_change == n) {
+            candidates.pop();
+        }
+
+
+        auto config = v.config;
+        config[node_idx] = false;
+
+        auto removed_node_solution = Configuration(config, node_idx + 1);
+        int num_components = calculate_num_components();
+        if(num_components >= c) {
+            if(removed_node_solution.value > best_solution.value) {
+                best_solution = removed_node_solution;
+            }
+        } else if(
+            num_components != 0 &&
+            removed_node_solution.nxt_idx_to_change != n &&
+            can_have_one_extra_component(config, num_components)
+        ) {
+            candidates.push(removed_node_solution);
+        }
+    }
+
+    return extract_best_solution(best_solution.config);
 }
 
 
@@ -310,8 +368,7 @@ int main() {
     alarm(4);
 
     auto start_time = chrono::high_resolution_clock::now();
-    int start_comps = calculate_num_components();
-    const auto sol = rec(0, start_comps);
+    const auto sol = run();
 
     finished = true;
     auto end_time = chrono::high_resolution_clock::now();
@@ -332,6 +389,7 @@ int main() {
 }
 
 // ./main ../test_instances/16_2.txt > ../solutions/backtrack/test1/16_2.txt && ./main ../test_instances/16_3.txt > ../solutions/backtrack/test1/16_3.txt && ./main ../test_instances/16_4.txt > ../solutions/backtrack/test1/16_4.txt && ./main ../test_instances/32_2.txt > ../solutions/backtrack/test1/32_2.txt && ./main ../test_instances/32_3.txt > ../solutions/backtrack/test1/32_3.txt && ./main ../test_instances/32_4.txt > ../solutions/backtrack/test1/32_4.txt && ./main ../test_instances/32_8.txt > ../solutions/backtrack/test1/32_8.txt
+// ./main ../test_instances/16_2.txt > ../solutions/backtrack/test2/16_2.txt && ./main ../test_instances/16_3.txt > ../solutions/backtrack/test2/16_3.txt && ./main ../test_instances/16_4.txt > ../solutions/backtrack/test2/16_4.txt && ./main ../test_instances/32_2.txt > ../solutions/backtrack/test2/32_2.txt && ./main ../test_instances/32_3.txt > ../solutions/backtrack/test2/32_3.txt && ./main ../test_instances/32_4.txt > ../solutions/backtrack/test2/32_4.txt && ./main ../test_instances/32_8.txt > ../solutions/backtrack/test2/32_8.txt
 
 // python3 ../statatistics.py ../test_instances/16_2.txt ../solutions/backtrack/test1/16_2.txt ../images/backtrack/test1/16_2.png
 // python3 ../statatistics.py ../test_instances/16_3.txt ../solutions/backtrack/test1/16_3.txt ../images/backtrack/test1/16_3.png
@@ -340,3 +398,11 @@ int main() {
 // python3 ../statatistics.py ../test_instances/32_3.txt ../solutions/backtrack/test1/32_3.txt ../images/backtrack/test1/32_3.png
 // python3 ../statatistics.py ../test_instances/32_4.txt ../solutions/backtrack/test1/32_4.txt ../images/backtrack/test1/32_4.png
 // python3 ../statatistics.py ../test_instances/32_8.txt ../solutions/backtrack/test1/32_8.txt ../images/backtrack/test1/32_8.png
+
+// python3 ../statatistics.py ../test_instances/16_2.txt ../solutions/backtrack/test2/16_2.txt ../images/backtrack/test2/16_2.png
+// python3 ../statatistics.py ../test_instances/16_3.txt ../solutions/backtrack/test2/16_3.txt ../images/backtrack/test2/16_3.png
+// python3 ../statatistics.py ../test_instances/16_4.txt ../solutions/backtrack/test2/16_4.txt ../images/backtrack/test2/16_4.png
+// python3 ../statatistics.py ../test_instances/32_2.txt ../solutions/backtrack/test2/32_2.txt ../images/backtrack/test2/32_2.png
+// python3 ../statatistics.py ../test_instances/32_3.txt ../solutions/backtrack/test2/32_3.txt ../images/backtrack/test2/32_3.png
+// python3 ../statatistics.py ../test_instances/32_4.txt ../solutions/backtrack/test2/32_4.txt ../images/backtrack/test2/32_4.png
+// python3 ../statatistics.py ../test_instances/32_8.txt ../solutions/backtrack/test2/32_8.txt ../images/backtrack/test2/32_8.png
