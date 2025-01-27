@@ -1,4 +1,3 @@
-from os import system
 from random import shuffle
 import tests
 
