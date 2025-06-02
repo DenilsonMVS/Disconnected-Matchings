@@ -168,5 +168,59 @@ def main():
 # python3 statatistics.py test_instances/32_4.txt solutions/linear/test2/32_4.txt images/linear/test2/32_4.png
 # python3 statatistics.py test_instances/32_8.txt solutions/linear/test2/32_8.txt images/linear/test2/32_8.png
 
+# Obter nova base
+# python3 statatistics.py test_instances/16_2.txt solutions/linear/test3/16_2.txt images/linear/test3/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/linear/test3/16_3.txt images/linear/test3/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/linear/test3/16_4.txt images/linear/test3/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/linear/test3/32_2.txt images/linear/test3/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/linear/test3/32_3.txt images/linear/test3/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/linear/test3/32_4.txt images/linear/test3/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/linear/test3/32_8.txt images/linear/test3/32_8.png
+
+# M = n
+# python3 statatistics.py test_instances/16_2.txt solutions/linear/test4/16_2.txt images/linear/test4/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/linear/test4/16_3.txt images/linear/test4/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/linear/test4/16_4.txt images/linear/test4/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/linear/test4/32_2.txt images/linear/test4/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/linear/test4/32_3.txt images/linear/test4/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/linear/test4/32_4.txt images/linear/test4/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/linear/test4/32_8.txt images/linear/test4/32_8.png
+
+# k == c
+# python3 statatistics.py test_instances/16_2.txt solutions/linear/test5/16_2.txt images/linear/test5/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/linear/test5/16_3.txt images/linear/test5/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/linear/test5/16_4.txt images/linear/test5/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/linear/test5/32_2.txt images/linear/test5/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/linear/test5/32_3.txt images/linear/test5/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/linear/test5/32_4.txt images/linear/test5/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/linear/test5/32_8.txt images/linear/test5/32_8.png
+
+# base
+# python3 statatistics.py test_instances/16_2.txt solutions/cp_sat/test4/16_2.txt images/cp_sat/test4/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/cp_sat/test4/16_3.txt images/cp_sat/test4/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/cp_sat/test4/16_4.txt images/cp_sat/test4/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/cp_sat/test4/32_2.txt images/cp_sat/test4/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/cp_sat/test4/32_3.txt images/cp_sat/test4/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/cp_sat/test4/32_4.txt images/cp_sat/test4/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/cp_sat/test4/32_8.txt images/cp_sat/test4/32_8.png
+
+# k == c
+# python3 statatistics.py test_instances/16_2.txt solutions/cp_sat/test5/16_2.txt images/cp_sat/test5/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/cp_sat/test5/16_3.txt images/cp_sat/test5/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/cp_sat/test5/16_4.txt images/cp_sat/test5/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/cp_sat/test5/32_2.txt images/cp_sat/test5/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/cp_sat/test5/32_3.txt images/cp_sat/test5/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/cp_sat/test5/32_4.txt images/cp_sat/test5/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/cp_sat/test5/32_8.txt images/cp_sat/test5/32_8.png
+
+# removendo simetria
+# python3 statatistics.py test_instances/16_2.txt solutions/linear/test6/16_2.txt images/linear/test6/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/linear/test6/16_3.txt images/linear/test6/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/linear/test6/16_4.txt images/linear/test6/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/linear/test6/32_2.txt images/linear/test6/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/linear/test6/32_3.txt images/linear/test6/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/linear/test6/32_4.txt images/linear/test6/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/linear/test6/32_8.txt images/linear/test6/32_8.png
+
 if __name__ == "__main__":
     main()

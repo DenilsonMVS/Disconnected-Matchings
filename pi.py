@@ -3,15 +3,17 @@ from pulp import LpProblem, LpMaximize, LpVariable, lpSum, LpStatus, PULP_CBC_CM
 from load_graphs import load_adjacency_matrixes
 from solutions import Solution, OPTIMAL, FEASIBLE, INFEASIBLE, UNKNOWN
 
-INF = 1000
+INF = None
 
 def add_if_a_true_then_b_c_equal(prob, a, b, c):
     prob += (1 - a) * INF + b >= c
     prob += (1 - a) * INF + c >= b
 
 def maximum_disconnected_matching(g, num_components, timeout):
+    global INF
 
     n = len(g)
+    INF = n
 
     prob = LpProblem("Maximum_Disconnected_Matching", LpMaximize)
     edges = [[LpVariable(f"edges_{i}_{j}", cat="Binary") for j in range(n)] for i in range(n)]
@@ -37,7 +39,7 @@ def maximum_disconnected_matching(g, num_components, timeout):
     seeds = [LpVariable(f"seed_{i}", cat="Binary") for i in range(n)]
 
     # At least num_components seeds must be selected
-    prob += lpSum(seeds) >= num_components
+    prob += lpSum(seeds) == num_components
 
     vertex_group = [LpVariable(f"vertex_group_{i}") for i in range(n)]
 
@@ -54,7 +56,7 @@ def maximum_disconnected_matching(g, num_components, timeout):
         for j in range(i + 1, n):
             prob += vertex_group[i] + ((1 - g[i][j]) + (1 - lpSum(edges[i])) + (1 - lpSum(edges[j]))) * INF >= vertex_group[j]
             prob += vertex_group[j] + ((1 - g[i][j]) + (1 - lpSum(edges[i])) + (1 - lpSum(edges[j]))) * INF >= vertex_group[i]
-
+            prob += seeds[j] <= (1 - g[i][j]) + (1 - lpSum(edges[i]))
 
     # Objective: Maximize the number of selected edges
     prob += lpSum(lpSum(edges[i][j] for j in range(i + 1, n)) for i in range(n))
