@@ -222,5 +222,25 @@ def main():
 # python3 statatistics.py test_instances/32_4.txt solutions/linear/test6/32_4.txt images/linear/test6/32_4.png
 # python3 statatistics.py test_instances/32_8.txt solutions/linear/test6/32_8.txt images/linear/test6/32_8.png
 
+# Escovando constante sem remoção de simetria
+# python3 statatistics.py test_instances/16_2.txt solutions/linear/test7/16_2.txt images/linear/test7/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/linear/test7/16_3.txt images/linear/test7/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/linear/test7/16_4.txt images/linear/test7/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/linear/test7/32_2.txt images/linear/test7/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/linear/test7/32_3.txt images/linear/test7/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/linear/test7/32_4.txt images/linear/test7/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/linear/test7/32_8.txt images/linear/test7/32_8.png
+
+# Escovando constante com remoção de simetria
+# Por algum motivo, isso zuckou no caso problematic.txt. Claramente não tem solução
+# Mas ao adicionar um constraint, magicamente uma solução é encontrada.
+# python3 statatistics.py test_instances/16_2.txt solutions/linear/test8/16_2.txt images/linear/test8/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/linear/test8/16_3.txt images/linear/test8/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/linear/test8/16_4.txt images/linear/test8/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/linear/test8/32_2.txt images/linear/test8/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/linear/test8/32_3.txt images/linear/test8/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/linear/test8/32_4.txt images/linear/test8/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/linear/test8/32_8.txt images/linear/test8/32_8.png
+
 if __name__ == "__main__":
     main()
