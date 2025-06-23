@@ -51,7 +51,7 @@ def maximum_disconnected_matching(g: list[list[bool]], num_components: int, time
     num_seeds = model.new_int_var(0, n, "num_seeds")
     
     model.Add(num_seeds == sum([vertex_group[i][i] for i in range(n)]))
-    model.Add(num_seeds >= num_components)
+    model.Add(num_seeds == num_components)
 
     for i in range(n):
         for j in range(n):
@@ -70,6 +70,9 @@ def maximum_disconnected_matching(g: list[list[bool]], num_components: int, time
                 model.add_bool_or([not g[i][j], has_edge[i].Not(), has_edge[j].Not(), vertex_group[i][k].Not(), vertex_group[j][k]])
                 model.add_bool_or([not g[i][j], has_edge[i].Not(), has_edge[j].Not(), vertex_group[i][k], vertex_group[j][k].Not()])
 
+    for i in range(n):
+        for j in range(i + 1):
+            model.add_bool_or([not g[i][j], has_edge[i].Not(), vertex_group[j][j].Not()])
     
     objective = []
     for i in range(n):
@@ -241,6 +244,25 @@ def main():
 # python3 statatistics.py test_instances/32_3.txt solutions/linear/test8/32_3.txt images/linear/test8/32_3.png
 # python3 statatistics.py test_instances/32_4.txt solutions/linear/test8/32_4.txt images/linear/test8/32_4.png
 # python3 statatistics.py test_instances/32_8.txt solutions/linear/test8/32_8.txt images/linear/test8/32_8.png
+
+# Remoção de simetrias do SAT
+# python3 statatistics.py test_instances/16_2.txt solutions/cp_sat/test6/16_2.txt images/cp_sat/test6/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/cp_sat/test6/16_3.txt images/cp_sat/test6/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/cp_sat/test6/16_4.txt images/cp_sat/test6/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/cp_sat/test6/32_2.txt images/cp_sat/test6/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/cp_sat/test6/32_3.txt images/cp_sat/test6/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/cp_sat/test6/32_4.txt images/cp_sat/test6/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/cp_sat/test6/32_8.txt images/cp_sat/test6/32_8.png
+
+# Pequena otimização na remoção de simetrias do SAT
+# python3 statatistics.py test_instances/16_2.txt solutions/cp_sat/test7/16_2.txt images/cp_sat/test7/16_2.png
+# python3 statatistics.py test_instances/16_3.txt solutions/cp_sat/test7/16_3.txt images/cp_sat/test7/16_3.png
+# python3 statatistics.py test_instances/16_4.txt solutions/cp_sat/test7/16_4.txt images/cp_sat/test7/16_4.png
+# python3 statatistics.py test_instances/32_2.txt solutions/cp_sat/test7/32_2.txt images/cp_sat/test7/32_2.png
+# python3 statatistics.py test_instances/32_3.txt solutions/cp_sat/test7/32_3.txt images/cp_sat/test7/32_3.png
+# python3 statatistics.py test_instances/32_4.txt solutions/cp_sat/test7/32_4.txt images/cp_sat/test7/32_4.png
+# python3 statatistics.py test_instances/32_8.txt solutions/cp_sat/test7/32_8.txt images/cp_sat/test7/32_8.png
+
 
 if __name__ == "__main__":
     main()
