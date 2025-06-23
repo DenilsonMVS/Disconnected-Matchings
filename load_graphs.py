@@ -3,7 +3,9 @@ def load_adjacency_matrixes(filename: str) -> list[tuple[list[list[bool]], int]]
     lines = []
     file = open(filename)
     for line in file:
-        lines.append(line[:-1])
+        lines.append(line)
+        if line[-1] == "\n":
+            lines[-1] = line[:-1]
 
     current_line = 0
     

@@ -56,7 +56,7 @@ def maximum_disconnected_matching(g, num_components, timeout):
         for j in range(i + 1, n):
             prob += vertex_group[i] + ((1 - g[i][j]) + (1 - lpSum(edges[i])) + (1 - lpSum(edges[j]))) * INF >= vertex_group[j]
             prob += vertex_group[j] + ((1 - g[i][j]) + (1 - lpSum(edges[i])) + (1 - lpSum(edges[j]))) * INF >= vertex_group[i]
-            prob += seeds[j] <= (1 - g[i][j]) + (1 - lpSum(edges[i]))
+            prob += seeds[j] <= (1 - g[i][j]) + (1 - lpSum(edges[i])) + (1 - lpSum(edges[j]))
 
     # Objective: Maximize the number of selected edges
     prob += lpSum(lpSum(edges[i][j] for j in range(i + 1, n)) for i in range(n))
@@ -93,7 +93,6 @@ def main():
 
     file = open(output_file, "w")
     graphs = load_adjacency_matrixes(input_file)
-    # graphs = graphs[-1:]
     for g, num_components in graphs:
         solution = maximum_disconnected_matching(g, num_components, 4)
         solution.log(file)
